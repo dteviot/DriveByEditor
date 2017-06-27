@@ -12,6 +12,10 @@ class Editor {
         }
     }
 
+    static isFirefox() {
+        return typeof(browser) !== "undefined";
+    }
+
     static addStyle(doc) {
         let style = doc.getElementById(Editor.styleElementId);
         if (style == null) {
@@ -215,4 +219,9 @@ Editor.addedClassName = "new";
 Editor.deletedClassName = "old";
 
 Editor.addStyle(window.document);
-chrome.extension.onMessage.addListener(Editor.messageListener);
+
+if (Editor.isFirefox()) {
+    browser.runtime.onMessage.addListener(Editor.messageListener);
+} else {
+    chrome.extension.onMessage.addListener(Editor.messageListener);
+}

@@ -1,7 +1,8 @@
 "use strict";
 
 function genericOnClick(info, tab) {
-    chrome.tabs.sendMessage(tab.id, {
+    let shim = (typeof(browser) !== "undefined") ? browser : chrome;
+    shim.tabs.sendMessage(tab.id, {
         functiontoInvoke: info.menuItemId
     });
 }
