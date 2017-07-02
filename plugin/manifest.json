@@ -22,7 +22,8 @@
         }
     ],
     "permissions": [
-        "contextMenus"
+        "contextMenus",
+        "clipboardWrite"
     ],
     "applications": {
         "gecko": {

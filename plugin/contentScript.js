@@ -7,7 +7,7 @@ class Editor {
             case "delete": Editor.delete(); break;
             case "replace": Editor.replace(); break;
             case "undo": Editor.undo(); break;
-            case "save": Editor.save(); break;
+            case "copy": Editor.copy(); break;
             default: console.log("No match found for command"); break;
         }
     }
@@ -26,6 +26,13 @@ class Editor {
                 "span.old { color: #f00; text-decoration: line-through; }\r\n"+
                 "span.new { color: #0f0; font-weight: bold; }";
         }
+    }
+
+    static addClipboardBuffer(doc) {
+        let buffer = doc.createElement("textarea");
+        buffer.id = Editor.clipboardBufferlementId;
+        doc.body.appendChild(buffer);
+        return buffer;
     }
 
     static add() {
@@ -76,10 +83,11 @@ class Editor {
         }
     }
 
-    static save() {
-        let fileName = "EditedWebPage.html";
-        let blob = Editor.serializePage();
-        Editor.saveOnChrome(blob, fileName);
+    static copy() {
+        let buffer = Editor.addClipboardBuffer(document);
+        buffer.value = Editor.serializeEdits();
+        Editor.copyToClipboard(document, buffer);
+        buffer.remove();
     }
 
     static nextSequenceNumber() {
@@ -148,39 +156,61 @@ class Editor {
         nextSibling.parentElement.insertBefore(span, nextSibling);
     }
 
-    static serializePage() {
-        let docString = [ Editor.fragmentToSave().all[0].outerHTML ];
-        return new Blob(docString, {type : 'text/html'});
+    static serializeEdits() {
+        let text = ""
+        for(let parent of Editor.getParentElementsOfEdits()) {
+            text += Editor.convertEditParentToText(parent) + "\r\n\r\n";
+        }
+        return text;
     }
 
-    static fragmentToSave() {
-        let edits = Editor.iterateElements(document.body, 
+    static getParentElementsOfEdits() {
+        let parents = new Set();
+        for(let edit of Editor.iterateElements(document.body, 
             e => e.id.startsWith(Editor.driveByEditIdTag)
-        );
-        let ancestor = document.body;
-        if (2 < edits.length) {
-            let range = new Range();
-            range.setStart(edits[0], 0);
-            range.setEnd(edits[edits.length - 1], 0);
-            ancestor = range.commonAncestorContainer;
+        )) {
+            parents.add(edit.parentElement);
         }
-        let newDoc = new DOMParser().parseFromString(
-            "<html><head><title></title></head><body></body></html>",
-             "text/html"
-        );
-        Editor.addStyle(newDoc);
-        for(let i = 0; i < ancestor.children.length; ++i) {
-            newDoc.body.appendChild(ancestor.children[i].cloneNode(true));
+        return parents;
+    }
+
+    static convertEditParentToText(parent) {
+        let clone = parent.cloneNode(true);
+        Editor.convertEditSpansToText(clone);
+        return clone.textContent;
+    }
+
+    static convertEditSpansToText(parent) {
+        for(let span of Editor.iterateElements(parent, 
+            e => e.id.startsWith(Editor.driveByEditIdTag)
+        )) {
+            switch (span.className) {
+                case Editor.labelClassName: span.remove(); break;
+                case Editor.addedClassName:
+                    Editor.editSpanToText(span, "add", parent);
+                    break;
+                case Editor.deletedClassName:
+                    Editor.editSpanToText(span, "remove", parent);
+                    break;
+                default: console.log("No match found for class"); break;
+            }
         }
-        return newDoc;
-    }    
+    }
+
+    static editSpanToText(span, editDescription, parent) {
+        let endText = `{(end ${editDescription})}`;
+        let beforeText = document.createTextNode(`{(start ${editDescription})}`);
+        let afterText = document.createTextNode(`{(end ${editDescription})}`);
+        parent.insertBefore(beforeText, span);
+        parent.insertBefore(afterText, span.nextSibling);
+    }
 
     static undoElement(element) {
         switch (element.className) {
             case Editor.labelClassName: element.remove(); break;
             case Editor.addedClassName: element.remove(); break;
             case Editor.deletedClassName: Editor.undoDelete(element); break;
-            default: console.log("No match found for command"); break;
+            default: console.log("No match found for class"); break;
         }
     }
 
@@ -189,18 +219,17 @@ class Editor {
         element.replaceWith(textNode);
     }
 
-    static saveOnChrome(blob, fileName) {
-        var clickEvent = new MouseEvent("click", {
-            "view": window,
-            "bubbles": true,
-            "cancelable": false
-        });
-        var a = document.createElement("a");
-        let dataUrl = URL.createObjectURL(blob);
-        a.href = dataUrl;
-        a.download = fileName;
-        a.dispatchEvent(clickEvent);
-        Editor.scheduleDataUrlForDisposal(dataUrl);
+    static copyToClipboard(doc, buffer) {
+        buffer.select();
+        try {
+            let success = doc.execCommand("Copy");
+            if (!success) {
+                console.log("Unable to copy");
+            }
+        } catch (err) {
+            console.log("Unable to copy");
+            console.log(err);
+        }
     }
 
     static scheduleDataUrlForDisposal(dataUrl) {
@@ -213,6 +242,7 @@ class Editor {
 }
 
 Editor.styleElementId = "DriveByEditStyle";
+Editor.clipboardBufferlementId = "DriveByEditClipboardBuffer";
 Editor.driveByEditIdTag = "DriveByEdit-";
 Editor.labelClassName = "editLabel";
 Editor.addedClassName = "new";
