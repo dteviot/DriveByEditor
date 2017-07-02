@@ -11,8 +11,8 @@ let menuItems = [
     {id: "add", title: "Add New Text"},
     {id: "delete", title: "Delete Selected Text"},
     {id: "replace", title: "Replace Selected Text"},
-    {id: "undo", title: "Undo last edit", contexts: ["page"]},
-    {id: "copy", title: "Copy edits to clipboard", contexts: ["page"]}
+    {id: "undo", title: "Undo last edit", contexts: ["page", "selection"]},
+    {id: "copy", title: "Copy edits to clipboard", contexts: ["page", "selection"]}
 ];
 
 for (let i of menuItems) {
