@@ -8,7 +8,7 @@ class Editor {
             case "replace": Editor.replace(); break;
             case "undo": Editor.undo(); break;
             case "copy": Editor.copy(); break;
-            default: console.log("No match found for command"); break;
+            default: alert("No match found for command"); break;
         }
     }
 
@@ -192,7 +192,7 @@ class Editor {
                 case Editor.deletedClassName:
                     Editor.editSpanToText(span, "remove", parent);
                     break;
-                default: console.log("No match found for class"); break;
+                default: alert("No match found for class"); break;
             }
         }
     }
@@ -210,7 +210,7 @@ class Editor {
             case Editor.labelClassName: element.remove(); break;
             case Editor.addedClassName: element.remove(); break;
             case Editor.deletedClassName: Editor.undoDelete(element); break;
-            default: console.log("No match found for class"); break;
+            default: alert("No match found for class"); break;
         }
     }
 
@@ -224,11 +224,11 @@ class Editor {
         try {
             let success = doc.execCommand("Copy");
             if (!success) {
-                console.log("Unable to copy");
+                alert("Unable to copy");
             }
         } catch (err) {
-            console.log("Unable to copy");
-            console.log(err);
+            alert("Unable to copy");
+            alert(err);
         }
     }
 
