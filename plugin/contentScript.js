@@ -12,6 +12,15 @@ class Editor {
         }
     }
 
+    static init() {
+        Editor.addStyle(window.document);
+        if (Editor.isFirefox()) {
+            browser.runtime.onMessage.addListener(Editor.messageListener);
+        } else {
+            chrome.extension.onMessage.addListener(Editor.messageListener);
+        }
+    }
+
     static isFirefox() {
         return typeof(browser) !== "undefined";
     }
@@ -26,13 +35,6 @@ class Editor {
                 "span.old { color: #f00; text-decoration: line-through; }\r\n"+
                 "span.new { color: #0f0; font-weight: bold; }";
         }
-    }
-
-    static addClipboardBuffer(doc) {
-        let buffer = doc.createElement("textarea");
-        buffer.id = Editor.clipboardBufferlementId;
-        doc.body.appendChild(buffer);
-        return buffer;
     }
 
     static add() {
@@ -84,10 +86,7 @@ class Editor {
     }
 
     static copy() {
-        let buffer = Editor.addClipboardBuffer(document);
-        buffer.value = Editor.serializeEdits();
-        Editor.copyToClipboard(document, buffer);
-        buffer.remove();
+        Editor.copyToClipboard(document);
     }
 
     static nextSequenceNumber() {
@@ -158,10 +157,14 @@ class Editor {
 
     static serializeEdits() {
         let text = ""
+        let html = ""
         for(let parent of Editor.getParentElementsOfEdits()) {
-            text += Editor.convertEditParentToText(parent) + "\r\n\r\n";
+            let clone = parent.cloneNode(true);
+            Editor.addStyleToEditSpan(clone);
+            html += clone.outerHTML;
+            text += Editor.convertEditParentToText(clone) + "\r\n\r\n";
         }
-        return text;
+        return {text: text, html: html};
     }
 
     static getParentElementsOfEdits() {
@@ -175,17 +178,10 @@ class Editor {
     }
 
     static convertEditParentToText(parent) {
-        let clone = parent.cloneNode(true);
-        Editor.convertEditSpansToText(clone);
-        return clone.textContent;
-    }
-
-    static convertEditSpansToText(parent) {
         for(let span of Editor.iterateElements(parent, 
             e => e.id.startsWith(Editor.driveByEditIdTag)
         )) {
             switch (span.className) {
-                case Editor.labelClassName: span.remove(); break;
                 case Editor.addedClassName:
                     Editor.editSpanToText(span, "add", parent);
                     break;
@@ -195,6 +191,7 @@ class Editor {
                 default: alert("No match found for class"); break;
             }
         }
+        return parent.textContent;
     }
 
     static editSpanToText(span, editDescription, parent) {
@@ -203,6 +200,23 @@ class Editor {
         let afterText = document.createTextNode(`{(end ${editDescription})}`);
         parent.insertBefore(beforeText, span);
         parent.insertBefore(afterText, span.nextSibling);
+    }
+
+    static addStyleToEditSpan(parent) {
+        for(let span of Editor.iterateElements(parent, 
+            e => e.id.startsWith(Editor.driveByEditIdTag)
+        )) {
+            switch (span.className) {
+                case Editor.labelClassName: span.remove(); break;
+                case Editor.addedClassName:
+                    span.setAttribute("style", "color: #0f0; font-weight: bold;");
+                    break;
+                case Editor.deletedClassName:
+                    span.setAttribute("style", "color: #f00; text-decoration: line-through;");
+                    break;
+                default: alert("No match found for class"); break;
+            }
+        }
     }
 
     static undoElement(element) {
@@ -219,8 +233,8 @@ class Editor {
         element.replaceWith(textNode);
     }
 
-    static copyToClipboard(doc, buffer) {
-        buffer.select();
+    static copyToClipboard(doc) {
+        doc.addEventListener('copy', Editor.onCopyEvent);
         try {
             let success = doc.execCommand("Copy");
             if (!success) {
@@ -230,6 +244,14 @@ class Editor {
             alert("Unable to copy");
             alert(err);
         }
+        doc.removeEventListener('copy', Editor.onCopyEvent);
+    }
+
+    static onCopyEvent(e) {
+        let serialized = Editor.serializeEdits(e.clipboardData);
+        e.clipboardData.setData('text/plain', serialized.text);
+        e.clipboardData.setData('text/html', serialized.html);
+        e.preventDefault(); // We want our data, not data from any selection, to be written to the clipboard
     }
 
     static scheduleDataUrlForDisposal(dataUrl) {
@@ -242,16 +264,9 @@ class Editor {
 }
 
 Editor.styleElementId = "DriveByEditStyle";
-Editor.clipboardBufferlementId = "DriveByEditClipboardBuffer";
 Editor.driveByEditIdTag = "DriveByEdit-";
 Editor.labelClassName = "editLabel";
 Editor.addedClassName = "new";
 Editor.deletedClassName = "old";
 
-Editor.addStyle(window.document);
-
-if (Editor.isFirefox()) {
-    browser.runtime.onMessage.addListener(Editor.messageListener);
-} else {
-    chrome.extension.onMessage.addListener(Editor.messageListener);
-}
+Editor.init();
