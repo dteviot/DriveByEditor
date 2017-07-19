@@ -1,7 +1,7 @@
 # Drive By Editor
 (c) 2017 David Teviotdale
 
-A simple Extension for Chrome that allows you to mark up proof reading corrections on a web page.
+A simple Extension for Firefox and Chrome that allows you to mark up proof reading corrections on a web page.
 
 ## How to use:
 * Browse to Web page with text you want to proof read.
@@ -9,6 +9,12 @@ A simple Extension for Chrome that allows you to mark up proof reading correctio
 * To Add text, select the text on the web page, right click, select "Drive By Editor" -> "Add New Text"  Type new text into the window that appears and click "Apply" button.
 * To Replace text, select the text on the web page, right click, select "Drive By Editor" -> "Replace Selected Text"  Type new text into the window that appears and click "Apply" button.
 * When done, all the edits can be copied to the clipboard at once. Right click anywhere on page, then select "Drive by Editor" -> "Copy edits to Clipboard".
+
+## How to install
+### Firefox
+1. Start Firefox
+2. Browse to https://addons.mozilla.org/en-GB/firefox/addon/drive-by-editor/?src=ss
+3. Click on the "Add to Firefox" button.
 
 ## How to install from Source
 ### Chrome
